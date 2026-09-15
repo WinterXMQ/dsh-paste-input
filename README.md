@@ -13,7 +13,7 @@ DSH WebUI 文件输入增强插件：**Ctrl+V 粘贴** + **全页面拖拽** + *
 
 ```sh
 # 方式一：git 依赖固定 tag（公开镜像，推荐；也可用 github:lhh010/dsh-paste-input）
-dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-paste-input#v0.1.25'
+dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-paste-input#v0.1.26'
 
 # 方式二：本地 link
 # dsh plugin --profile web add link:/path/to/dsh-paste-input
@@ -29,63 +29,10 @@ dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-p
 
 > **安装提示**：pnpm 11 首次安装可能拦截 node-pty 等构建脚本——在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all` 放行后重跑安装命令；装完**硬刷新浏览器**（Ctrl/Cmd+Shift+R）。
 
-### 提示词安装（让 DSH 自己装）
+### 2026-09-15 · v0.1.26 — 声明支持 dsh-v0.1.6-alpha.1
 
-把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
+声明支持 dsh-v0.1.6-alpha.1（npm 已发布，钉版本实机验证；client 插件面零代码差异，lib node --check 全绿，实机加载正常）。安装命令统一更新为 `#v0.1.26`。
 
-> 帮我安装 dsh-paste-input 插件（DSH 文件输入增强：粘贴/拖拽文件），步骤：
-> 1. 执行 `dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-paste-input#v0.1.25'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
-> 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
-> 3. 再执行一次第 1 步的安装命令
-> 4. 完成后在 `~/.dsh/profiles/web/cordis.patch.yml` 追加 - insert 插件行（id: dsh-paste-input，name: '@dsh-community/dsh-paste-input'），并提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
-> 遇到报错先查 https://github.com/lhh010/dsh-paste-input README 的常见问题/已知限制。
-
-hip 全链路可用；0811 与 0812 最终快照实机 boot 验证通过（见下）。
-
-## 迁移指南（DSH 0.1.1-rc.1 → 0.1.2-alpha.1）
-
-> 兼容 DSH `dsh-v0.1.2-alpha.3`（无构建面，实机验证；纯客户端）
-
-本插件**无需迁移**：运行时仅依赖 `react` 与 `slots` / `conversation` / `sessions` / `inputTriggers` 服务及 `conversation.input.left` / `conversation.input.dock` / `settings.section` 槽位——这些服务与槽位在 0.1.2-alpha.1 全部保留，客户端 API 重构（`@deepseek-ai/dsh-client-runtime` 移除、`ConversationSnapshot` 视图化、`ctx.slots.inject` 注册范式）不触及本插件的自包含 bundle；直接安装最新 tag（`#v0.1.9`）即可。
-
-**npm 发版兼容**：兼容 DSH npm 发版 `@deepseek-ai/dsh@0.1.1-rc.1`（v0.1.5 实机 boot 验证：`dsh --profile web` 启动后 boot 清单包含本插件、`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200，依赖的 `inputTriggers`/`conversation.input` 门面与四个槽位在 0.1.1-rc.1 上保持不变）与 `@deepseek-ai/dsh@0.1.0-rc.8`（v0.1.4 实机验证，适配要点见下节），同时兼容 `@deepseek-ai/dsh@0.0.1-rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式）与 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-community/dsh-paste-input`（inject: `dsh-client-runtime`/`dsh-client-ui-input-trigger`/`dsh-client-ui-conversation`/`dsh-client-ui-settings`），`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200；client 半经 `window.__ModuleLoader__.load` 正确注册，host 半的 `webServer` 上传路由在 rc.5 consumer 中加载成功。本插件**无任何 cordis 依赖**（无 peerDependencies；lib 构建产物无 cordis 导入）——0811 的 cordis 更名（`cordis` → `@deepseek-ai/cordis`）与本插件零影响，`npm install` 无需额外参数。
-
-### 0.1.0-rc.8 兼容要点（npm 发版 `@deepseek-ai/dsh@0.1.0-rc.8`，v0.1.4）
-
-- **输入机引用区间变化（修复删除失效）**：rc.8 的输入机把引用 occurrence 的行内区间从单个占位符字符改为完整显示文本（`@` + label，见 `referenceDraftText`）。v0.1.3 的 dock 删除逻辑只切除 1 个字符，点击 × 后 dock chip 消失但输入框内残留 `📎 image.png …` 之类的纯文本。v0.1.4 改用 `input.consumeToken({ kind: 'span', span: { start: occurrence.offset, end: occurrence.offset + occurrence.length, draftRev } })`（rc.8 `SessionInputShell` 的官方删除动词，带 CAS 保护）整段移除；无 `consumeToken` 的旧版本回退为按 `occurrence.length` 切除的 `setDraft`。
-- **官方文件外观（修复蓝色 @ + 回形针 + 蓝色文件名）**：rc.8 的 `insertReference` 支持官方 `appearance` 字段（`file`/`folder`/`session`，官方 `@file` 引用源即用 `appearance: 'file'`），composer 内联 chip 由官方样式渲染（隐藏 @ 字形 + 官方文件图标 + 蓝色文件名）。v0.1.3 自造的 `📎 ` emoji 前缀 + 8 字符截断 label 会渲染成「蓝色 @ + 回形针 + 蓝色文件名」，v0.1.4 移除 emoji 前缀，label 改为纯文件名（与官方 @file 引用一致），并附带 `appearance: 'file'`。
-- **槽位与服务不变**：`conversation.input.left` / `conversation.input.dock` / `conversation.input.right`（`kind: 'list'`, `scope: 'session'`）与 `settings.section` 在 rc.8 保持声明；`inputTriggers.registerSource`、`conversation.input.for(actx)`（返回带 `state`/`insertReference`/`consumeToken`/`setDraft` 的 facade）、host 侧 `webServer.register` 均不变。气泡折叠（`DSH_PASTE_INPUT_V1` 标记协议）与上传路由不受影响。
-
-### 0809 兼容要点（实机验证）
-
-- **加载机制变化**：0809 重构了客户端插件机制——旧的 `dsh.plugin.json` 清单 + `resolveClientPath`（`packages/plugin/plugin`）已删除，改为 **package.json 的 `dshClient` 声明**（`platform: 'web'`，可选 `inject`/`immediately`）+ `exports["./client"]` 指向构建产物；宿主扫描 loader 条目组成 boot 图，Web 端从 `/plugins/<id>/client.js` 拉取。本插件 package.json 已满足该声明，无需改动。
-- 附件消息协议（`==== DSH_PASTE_INPUT_V1 ====` 标记）与 `.dsh/tmp/attachments/<session>/<send>/` 目录逻辑不依赖快照内部实现，0809 实测全链路成功。
-- **构建要求**：0809 宿主在激活时校验 `dshClient` 包的构建产物，缺失会抛 `ClientPackageCompositionError` 并**拒绝启动 `dsh web`**——升级快照或改源码后必须重新 `pnpm run build` 再启动，否则浏览器拉到的是旧 `lib/client.js`。
-
-### 0810 兼容要点（snapshot0810）
-
-- **元数据发现变化**：0810 的 ClientModuleHostService 在启动时扫描已加载插件的 package.json，但只读**嵌套 `dsh.client`**（`packages/client/modules/src/index.ts` 的 `resolveMeta`，`pkg.dsh.client`）；顶层 `dshClient` 字段读不到会静默丢出 boot 图——无日志、无报错，"启动顺利但插件全没"。本插件已从顶层 `dshClient` 迁移为嵌套 `dsh.client`（inject 原样保留）；`lib/client.js` 构建产物不变（package.json 不参与编译），symlink 安装改源仓库即生效，无需重装。
-
-### 0811 兼容要点（snapshot0811，实机验证）
-
-- **cordis 更名对本插件零影响**：0811 将 vendored cordis 由 `cordis@4.0.0-rc.7` 更名为 `@deepseek-ai/cordis@4.0.1-rc.1`（官方 client 包随之全部改从 `@deepseek-ai/cordis` 导入）。本插件不导入 cordis（无 peerDependencies、lib 构建产物无 cordis 引用），无需任何迁移。
-- **实机 boot 验证**：snapshot0811（`snapshots/20260811T152241Z`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-community/dsh-paste-input`（inject: `dsh-client-runtime`/`dsh-client-ui-slash`/`dsh-client-ui-conversation`/`dsh-client-ui-settings`），`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200。本插件使用的槽位 `conversation.input.left`/`conversation.input.dock`（`ui-conversation` 声明）与 `settings.section`（`ui-settings` 声明）在 0811 上保持声明；`slash` 服务与 `window.__ModuleLoader__` 加载协议不变。
-
-### 0812/最终快照 兼容要点（snapshots/20260812T172954Z-final，实机验证）
-
-- **client 服务更名：`slash` → `inputTriggers`**：最终快照将输入触发服务由 `slash` 更名为 `inputTriggers`（随官方包 `@deepseek-ai/dsh-client-ui-slash` → `@deepseek-ai/dsh-client-ui-input-trigger` 一并改名，服务与 `registerSource` API 本身不变）。本插件 `lib/client.js` 已同步迁移 4 处（两个 inject 数组 + `ctx.get` + `registerSource` 调用），`dsh.client` 元数据的 inject 列表同步由 `dsh-client-ui-slash` 迁移为 `dsh-client-ui-input-trigger`。
-- **host 服务更名：`httpServer` → `webServer`**：最终快照将 host 侧 HTTP 路由注册服务由 `httpServer` 更名为 `webServer`（`packages/host/webserver` 提供，`register({ kind: 'prefix', path, handler })` API 不变）。本插件 `lib/index.js` 已同步迁移 2 处（inject 数组 + `ctx.webServer.register` 调用），上传路由照常注册。
-- **cordis 更名与本插件零影响**：与 0811 相同，本插件不导入 cordis（无 peerDependencies、lib 构建产物无 cordis 引用），`cordis` → `@deepseek-ai/cordis` 更名（npm rc.5 基线上为 `4.0.1-rc.4`）零影响，`npm install` 无需额外参数。
-- **实机 boot 验证**：最终快照（`snapshots/20260812T172954Z-final`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-community/dsh-paste-input`；npm rc.5 consumer `dsh web` 启动后 boot 清单同样包含本插件（inject 已显示 `dsh-client-ui-input-trigger`），`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200，host 半 `webServer` 上传路由加载成功。本插件使用的槽位 `conversation.input.left`/`conversation.input.dock`（`ui-conversation` 声明）与 `settings.section`（`ui-settings` 声明）在最终快照与 rc.5 上保持声明；`inputTriggers` 服务与 `window.__ModuleLoader__` 加载协议不变。
-
-## 更新记录 / Changelog
-
-### 2026-09-04 · v0.1.19 — 声明支持 dsh-v0.1.3-alpha.1
-
-- **验证**：0.1.3 破坏性变更集中在 host/session 侧（SessionHandle / session format v2），composer/输入面实测无影响；npm 未发布，源码宿主实机验证（粘贴入框/悬停预览/查看器正常），无需代码改动
-
-### 2026-09-09 · v0.1.23 — 声明支持 dsh-v0.1.5-alpha.2
-- **验证**：alpha.2 改动为 Sidebar 文档预览、模型文件交付、minimal 默认工具调整与 `fs-ext` 安装修复，client 插件面零代码差异；npm 已发布，钉版本实机验证；同步 lib 内烙死的 PLUGIN_VERSION 常量（避免幻影自更新）
 ### 2026-09-10 · v0.1.25 — 补充声明 dsh-v0.1.5-rc.2 兼容
 - **验证**：rc.2 无 client 插件面变更，无需代码改动；rc.2 实机宿主（tag fb2c4b9e）加载确认，粘贴入框/悬停预览/查看器正常
 
@@ -95,6 +42,8 @@ hip 全链路可用；0811 与 0812 最终快照实机 boot 验证通过（见�
 ### 2026-09-09 · v0.1.24 — 修复旧格式消息折叠失败
 - **修复**：会话历史中存在两种结束标记（现行 `==== END DSH_PASTE_INPUT ====` 与旧缓存 bundle 写入的 `==== END DSH_PASTE_INPUT_V1 ====`），解析器只认后者之外的现行格式导致旧消息折叠失败并刷 Console 警告；现兼容两种拼写。注：V1 结尾拼写为历史遗留（仅极早期 bundle 写入），**后续版本可能不再兼容**，依赖旧格式折叠的历史消息请尽快升级
 
+### 2026-09-09 · v0.1.23 — 声明支持 dsh-v0.1.5-alpha.2
+- **验证**：alpha.2 改动为 Sidebar 文档预览、模型文件交付、minimal 默认工具调整与 `fs-ext` 安装修复，client 插件面零代码差异；npm 已发布，钉版本实机验证；同步 lib 内烙死的 PLUGIN_VERSION 常量（避免幻影自更新）
 ### 2026-09-08 · v0.1.22 — 声明支持 dsh-v0.1.5-alpha.1
 - **验证**：0.1.5 改动在会话格式 V3 / `ctx.agent` 移除 / 宿主 client bundle 服务路由改 `/plugins/??` 组合路由，client 插件面零代码差异；npm 已发布，钉版本实机验证，无需代码改动；启动清单确认加载
 ### 2026-09-05 · v0.1.21 — 声明支持 dsh-v0.1.3-alpha.2
@@ -107,6 +56,10 @@ hip 全链路可用；0811 与 0812 最终快照实机 boot 验证通过（见�
 - **限额**：单文件 > 1 MiB 不持久化；快照总量上限约 3 MiB，超出自动跳过（大文件场景请关闭或接受部分持久化）。
 - 关闭开关即清空已持久化的记录。
 - **作用粒度**：持久化按"每次粘贴的记录"逐条生效——粘贴那一刻开关是开且文件不超限才写入；切到「关」清空已有记录；重新开启不回溯补旧记录；已发送的消息不受影响（文件已存宿主侧）。
+
+### 2026-09-04 · v0.1.19 — 声明支持 dsh-v0.1.3-alpha.1
+
+- **验证**：0.1.3 破坏性变更集中在 host/session 侧（SessionHandle / session format v2），composer/输入面实测无影响；npm 未发布，源码宿主实机验证（粘贴入框/悬停预览/查看器正常），无需代码改动
 
 ### 2026-09-03 · v0.1.18 — 声明支持 dsh-v0.1.2-rc.1
 
@@ -223,7 +176,7 @@ Attached files (paths are relative to the root above):
 
 ```sh
 # 方式一：git 依赖固定 tag（公开镜像，推荐；也可用 github:lhh010/dsh-paste-input）
-dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-paste-input#v0.1.25'
+dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-paste-input#v0.1.26'
 
 # 方式二：本地 link
 # dsh plugin --profile web add link:/path/to/dsh-paste-input
@@ -244,15 +197,48 @@ dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-p
 把下面这段提示词发给任意一个 DSH 会话，模型会替你完成安装：
 
 > 帮我安装 dsh-paste-input 插件（DSH 文件输入增强：粘贴/拖拽文件），步骤：
-> 1. 执行 `dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-paste-input#v0.1.25'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
+> 1. 执行 `dsh plugin --profile web add '@dsh-community/dsh-paste-input@github:lhh010/dsh-paste-input#v0.1.26'`（首次可能被 pnpm 11 拦截 node-pty 构建脚本而失败）
 > 2. 在 `~/.dsh/profiles/web` 下执行 `pnpm approve-builds --all`（放行构建脚本）
 > 3. 再执行一次第 1 步的安装命令
 > 4. 完成后在 `~/.dsh/profiles/web/cordis.patch.yml` 追加 - insert 插件行（id: dsh-paste-input，name: '@dsh-community/dsh-paste-input'），并提醒我硬刷新浏览器（Ctrl/Cmd+Shift+R）
 > 遇到报错先查 https://github.com/lhh010/dsh-paste-input README 的常见问题/已知限制。
-## License
 
-MIT（含 dsh-multimedia-webui-input 派生声明）
-### 2026-09-10 · v0.1.25 — 声明支持 dsh-v0.1.5-rc.1
-- **验证**：rc.1 为 0.1.5 系列首个候选版本，client 插件面零代码差异；npm 已发布，钉版本实机验证；同步 lib 内烙死的 PLUGIN_VERSION 常量
+hip 全链路可用；0811 与 0812 最终快照实机 boot 验证通过（见下）。
 
+## 迁移指南（DSH 0.1.1-rc.1 → 0.1.2-alpha.1）
 
+> 兼容 DSH `dsh-v0.1.2-alpha.3`（无构建面，实机验证；纯客户端）
+
+本插件**无需迁移**：运行时仅依赖 `react` 与 `slots` / `conversation` / `sessions` / `inputTriggers` 服务及 `conversation.input.left` / `conversation.input.dock` / `settings.section` 槽位——这些服务与槽位在 0.1.2-alpha.1 全部保留，客户端 API 重构（`@deepseek-ai/dsh-client-runtime` 移除、`ConversationSnapshot` 视图化、`ctx.slots.inject` 注册范式）不触及本插件的自包含 bundle；直接安装最新 tag（`#v0.1.9`）即可。
+
+**npm 发版兼容**：兼容 DSH npm 发版 `@deepseek-ai/dsh@0.1.1-rc.1`（v0.1.5 实机 boot 验证：`dsh --profile web` 启动后 boot 清单包含本插件、`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200，依赖的 `inputTriggers`/`conversation.input` 门面与四个槽位在 0.1.1-rc.1 上保持不变）与 `@deepseek-ai/dsh@0.1.0-rc.8`（v0.1.4 实机验证，适配要点见下节），同时兼容 `@deepseek-ai/dsh@0.0.1-rc.5`（dist-tag `next`，即最终快照 snapshot0812 的 npm 发版；`npm exec -p @deepseek-ai/dsh@0.0.1-rc.5 -- dsh --profile web --port <port>` 可访问指定版本并启动，lib 生产模式）与 `@deepseek-ai/dsh@0.0.1-rc.2`（snapshot0811 的 npm 发版）。实测（npm rc.5 基线）：`dsh web` 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-community/dsh-paste-input`（inject: `dsh-client-runtime`/`dsh-client-ui-input-trigger`/`dsh-client-ui-conversation`/`dsh-client-ui-settings`），`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200；client 半经 `window.__ModuleLoader__.load` 正确注册，host 半的 `webServer` 上传路由在 rc.5 consumer 中加载成功。本插件**无任何 cordis 依赖**（无 peerDependencies；lib 构建产物无 cordis 导入）——0811 的 cordis 更名（`cordis` → `@deepseek-ai/cordis`）与本插件零影响，`npm install` 无需额外参数。
+
+### 0.1.0-rc.8 兼容要点（npm 发版 `@deepseek-ai/dsh@0.1.0-rc.8`，v0.1.4）
+
+- **输入机引用区间变化（修复删除失效）**：rc.8 的输入机把引用 occurrence 的行内区间从单个占位符字符改为完整显示文本（`@` + label，见 `referenceDraftText`）。v0.1.3 的 dock 删除逻辑只切除 1 个字符，点击 × 后 dock chip 消失但输入框内残留 `📎 image.png …` 之类的纯文本。v0.1.4 改用 `input.consumeToken({ kind: 'span', span: { start: occurrence.offset, end: occurrence.offset + occurrence.length, draftRev } })`（rc.8 `SessionInputShell` 的官方删除动词，带 CAS 保护）整段移除；无 `consumeToken` 的旧版本回退为按 `occurrence.length` 切除的 `setDraft`。
+- **官方文件外观（修复蓝色 @ + 回形针 + 蓝色文件名）**：rc.8 的 `insertReference` 支持官方 `appearance` 字段（`file`/`folder`/`session`，官方 `@file` 引用源即用 `appearance: 'file'`），composer 内联 chip 由官方样式渲染（隐藏 @ 字形 + 官方文件图标 + 蓝色文件名）。v0.1.3 自造的 `📎 ` emoji 前缀 + 8 字符截断 label 会渲染成「蓝色 @ + 回形针 + 蓝色文件名」，v0.1.4 移除 emoji 前缀，label 改为纯文件名（与官方 @file 引用一致），并附带 `appearance: 'file'`。
+- **槽位与服务不变**：`conversation.input.left` / `conversation.input.dock` / `conversation.input.right`（`kind: 'list'`, `scope: 'session'`）与 `settings.section` 在 rc.8 保持声明；`inputTriggers.registerSource`、`conversation.input.for(actx)`（返回带 `state`/`insertReference`/`consumeToken`/`setDraft` 的 facade）、host 侧 `webServer.register` 均不变。气泡折叠（`DSH_PASTE_INPUT_V1` 标记协议）与上传路由不受影响。
+
+### 0809 兼容要点（实机验证）
+
+- **加载机制变化**：0809 重构了客户端插件机制——旧的 `dsh.plugin.json` 清单 + `resolveClientPath`（`packages/plugin/plugin`）已删除，改为 **package.json 的 `dshClient` 声明**（`platform: 'web'`，可选 `inject`/`immediately`）+ `exports["./client"]` 指向构建产物；宿主扫描 loader 条目组成 boot 图，Web 端从 `/plugins/<id>/client.js` 拉取。本插件 package.json 已满足该声明，无需改动。
+- 附件消息协议（`==== DSH_PASTE_INPUT_V1 ====` 标记）与 `.dsh/tmp/attachments/<session>/<send>/` 目录逻辑不依赖快照内部实现，0809 实测全链路成功。
+- **构建要求**：0809 宿主在激活时校验 `dshClient` 包的构建产物，缺失会抛 `ClientPackageCompositionError` 并**拒绝启动 `dsh web`**——升级快照或改源码后必须重新 `pnpm run build` 再启动，否则浏览器拉到的是旧 `lib/client.js`。
+
+### 0810 兼容要点（snapshot0810）
+
+- **元数据发现变化**：0810 的 ClientModuleHostService 在启动时扫描已加载插件的 package.json，但只读**嵌套 `dsh.client`**（`packages/client/modules/src/index.ts` 的 `resolveMeta`，`pkg.dsh.client`）；顶层 `dshClient` 字段读不到会静默丢出 boot 图——无日志、无报错，"启动顺利但插件全没"。本插件已从顶层 `dshClient` 迁移为嵌套 `dsh.client`（inject 原样保留）；`lib/client.js` 构建产物不变（package.json 不参与编译），symlink 安装改源仓库即生效，无需重装。
+
+### 0811 兼容要点（snapshot0811，实机验证）
+
+- **cordis 更名对本插件零影响**：0811 将 vendored cordis 由 `cordis@4.0.0-rc.7` 更名为 `@deepseek-ai/cordis@4.0.1-rc.1`（官方 client 包随之全部改从 `@deepseek-ai/cordis` 导入）。本插件不导入 cordis（无 peerDependencies、lib 构建产物无 cordis 引用），无需任何迁移。
+- **实机 boot 验证**：snapshot0811（`snapshots/20260811T152241Z`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-community/dsh-paste-input`（inject: `dsh-client-runtime`/`dsh-client-ui-slash`/`dsh-client-ui-conversation`/`dsh-client-ui-settings`），`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200。本插件使用的槽位 `conversation.input.left`/`conversation.input.dock`（`ui-conversation` 声明）与 `settings.section`（`ui-settings` 声明）在 0811 上保持声明；`slash` 服务与 `window.__ModuleLoader__` 加载协议不变。
+
+### 0812/最终快照 兼容要点（snapshots/20260812T172954Z-final，实机验证）
+
+- **client 服务更名：`slash` → `inputTriggers`**：最终快照将输入触发服务由 `slash` 更名为 `inputTriggers`（随官方包 `@deepseek-ai/dsh-client-ui-slash` → `@deepseek-ai/dsh-client-ui-input-trigger` 一并改名，服务与 `registerSource` API 本身不变）。本插件 `lib/client.js` 已同步迁移 4 处（两个 inject 数组 + `ctx.get` + `registerSource` 调用），`dsh.client` 元数据的 inject 列表同步由 `dsh-client-ui-slash` 迁移为 `dsh-client-ui-input-trigger`。
+- **host 服务更名：`httpServer` → `webServer`**：最终快照将 host 侧 HTTP 路由注册服务由 `httpServer` 更名为 `webServer`（`packages/host/webserver` 提供，`register({ kind: 'prefix', path, handler })` API 不变）。本插件 `lib/index.js` 已同步迁移 2 处（inject 数组 + `ctx.webServer.register` 调用），上传路由照常注册。
+- **cordis 更名与本插件零影响**：与 0811 相同，本插件不导入 cordis（无 peerDependencies、lib 构建产物无 cordis 引用），`cordis` → `@deepseek-ai/cordis` 更名（npm rc.5 基线上为 `4.0.1-rc.4`）零影响，`npm install` 无需额外参数。
+- **实机 boot 验证**：最终快照（`snapshots/20260812T172954Z-final`）web 启动后 `window.__DSH_BOOT__` 清单包含 `@dsh-community/dsh-paste-input`；npm rc.5 consumer `dsh web` 启动后 boot 清单同样包含本插件（inject 已显示 `dsh-client-ui-input-trigger`），`/plugins/@dsh-community/dsh-paste-input/client.js` 返回 200，host 半 `webServer` 上传路由加载成功。本插件使用的槽位 `conversation.input.left`/`conversation.input.dock`（`ui-conversation` 声明）与 `settings.section`（`ui-settings` 声明）在最终快照与 rc.5 上保持声明；`inputTriggers` 服务与 `window.__ModuleLoader__` 加载协议不变。
+
+## 更新记录 / Changelog
